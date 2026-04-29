@@ -192,6 +192,17 @@ export function useStore() {
     });
   }, []);
 
+  const updatePersonTags = useCallback((id: string, tags: string[]) => {
+    setState(prev => {
+      const next: State = {
+        ...prev,
+        people: prev.people.map(p => p.id === id ? { ...p, tags } : p),
+      };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const deleteArchivedBill = useCallback((id: string) => {
     setState(prev => {
       const next = { ...prev, archive: prev.archive.filter(b => b.id !== id) };
@@ -209,6 +220,7 @@ export function useStore() {
     upsertItem,
     deleteItem,
     startNewBill,
+    updatePersonTags,
     deleteArchivedBill,
   };
 }

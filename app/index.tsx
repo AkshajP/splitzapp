@@ -108,6 +108,7 @@ export default function MainScreen() {
           activeIds={store.activePeopleIds}
           onToggle={store.togglePersonActive}
           onAdd={store.addPerson}
+          onUpdateTags={store.updatePersonTags}
           t={t}
         />
       )}
