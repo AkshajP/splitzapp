@@ -1,0 +1,258 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState, useCallback } from 'react';
+
+export type Person = {
+  id: string;
+  name: string;
+  tags: string[];
+  color: string;
+};
+
+export type Item = {
+  id: string;
+  name: string;
+  amount: number;
+  assigned: string[];
+  mode: 'equal' | 'percent';
+  percents?: Record<string, number>;
+};
+
+export type ArchivedBill = {
+  id: string;
+  title: string;
+  date: string;
+  total: number;
+  peopleCount: number;
+  items: { name: string; amount: number }[];
+  perPerson: { name: string; color: string; share: number }[];
+  tax?: number;
+  service?: number;
+  discount?: number;
+};
+
+type State = {
+  people: Person[];
+  activePeopleIds: string[];
+  items: Item[];
+  tax: number;
+  service: number;
+  discount: number;
+  discountType: 'amount' | 'pct';
+  billTitle: string;
+  archive: ArchivedBill[];
+};
+
+const STORAGE_KEY = 'splitzapp_state';
+
+const COLORS = ['#7dd3c0','#fbbf77','#f9a8d4','#a5b4fc','#fcd34d','#86efac','#fda4af','#93c5fd','#c4b5fd','#fde68a'];
+
+const DEFAULT_STATE: State = {
+  people: [],
+  activePeopleIds: [],
+  items: [],
+  tax: 5,
+  service: 10,
+  discount: 0,
+  discountType: 'amount' as const,
+  billTitle: 'New bill',
+  archive: [],
+};
+
+export function useStore() {
+  const [state, setState] = useState<State>(DEFAULT_STATE);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setState({ ...DEFAULT_STATE, ...parsed });
+        } catch {}
+      }
+      setLoaded(true);
+    });
+  }, []);
+
+  const save = useCallback((next: State) => {
+    setState(next);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }, []);
+
+  const update = useCallback((partial: Partial<State>) => {
+    setState(prev => {
+      const next = { ...prev, ...partial };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const addPerson = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setState(prev => {
+      const id = 'p' + Date.now();
+      const color = COLORS[prev.people.length % COLORS.length];
+      const person: Person = { id, name: trimmed, tags: [], color };
+      const next: State = {
+        ...prev,
+        people: [...prev.people, person],
+        activePeopleIds: [...prev.activePeopleIds, id],
+      };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const togglePersonActive = useCallback((id: string) => {
+    setState(prev => {
+      const activePeopleIds = prev.activePeopleIds.includes(id)
+        ? prev.activePeopleIds.filter(x => x !== id)
+        : [...prev.activePeopleIds, id];
+      const next = { ...prev, activePeopleIds };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const upsertItem = useCallback((item: Item) => {
+    setState(prev => {
+      const idx = prev.items.findIndex(x => x.id === item.id);
+      const items = idx === -1 ? [...prev.items, item] : prev.items.map((x, i) => i === idx ? item : x);
+      const next = { ...prev, items };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const deleteItem = useCallback((id: string) => {
+    setState(prev => {
+      const next = { ...prev, items: prev.items.filter(x => x.id !== id) };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const startNewBill = useCallback((newTitle: string) => {
+    setState(prev => {
+      const activePeople = prev.activePeopleIds.map(id => prev.people.find(p => p.id === id)!).filter(Boolean);
+      const subtotal = prev.items.reduce((s, i) => s + (i.amount || 0), 0);
+      const taxAmt = subtotal * (prev.tax / 100);
+      const serviceAmt = subtotal * (prev.service / 100);
+      const rawDiscountAmt = prev.discountType === 'pct' ? subtotal * (prev.discount / 100) : prev.discount;
+      const discountAmt = Math.min(rawDiscountAmt, subtotal);
+      const grand = subtotal + taxAmt + serviceAmt - discountAmt;
+
+      const perPersonShares: Record<string, number> = {};
+      prev.activePeopleIds.forEach(pid => { perPersonShares[pid] = 0; });
+      prev.items.forEach(it => {
+        const ppl = it.assigned.filter(pid => prev.activePeopleIds.includes(pid));
+        if (ppl.length === 0) return;
+        if (it.mode === 'percent' && it.percents) {
+          ppl.forEach(pid => { perPersonShares[pid] = (perPersonShares[pid] || 0) + it.amount * ((it.percents![pid] || 0) / 100); });
+        } else {
+          const share = it.amount / ppl.length;
+          ppl.forEach(pid => { perPersonShares[pid] = (perPersonShares[pid] || 0) + share; });
+        }
+      });
+
+      const newArchive: ArchivedBill[] = prev.items.length > 0 ? [
+        {
+          id: 'b' + Date.now(),
+          title: prev.billTitle,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          total: grand,
+          peopleCount: prev.activePeopleIds.length,
+          items: prev.items.map(it => ({ name: it.name, amount: it.amount })),
+          perPerson: activePeople.map(p => ({
+            name: p.name, color: p.color,
+            share: (() => {
+              const base = perPersonShares[p.id] || 0;
+              const ratio = subtotal > 0 ? base / subtotal : 0;
+              return base + taxAmt * ratio + serviceAmt * ratio - discountAmt * ratio;
+            })(),
+          })),
+          tax: prev.tax, service: prev.service, discount: prev.discount,
+        },
+        ...prev.archive,
+      ] : prev.archive;
+
+      const next: State = {
+        ...prev,
+        items: [],
+        tax: 5,
+        service: 10,
+        discount: 0,
+        discountType: 'amount' as const,
+        billTitle: newTitle || 'New bill',
+        archive: newArchive,
+      };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const deleteArchivedBill = useCallback((id: string) => {
+    setState(prev => {
+      const next = { ...prev, archive: prev.archive.filter(b => b.id !== id) };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  return {
+    ...state,
+    loaded,
+    update,
+    addPerson,
+    togglePersonActive,
+    upsertItem,
+    deleteItem,
+    startNewBill,
+    deleteArchivedBill,
+  };
+}
+
+export function computeTotals(
+  items: Item[],
+  activePeopleIds: string[],
+  tax: number,
+  service: number,
+  discount: number,
+  discountType: 'amount' | 'pct' = 'amount',
+) {
+  const subtotal = items.reduce((s, i) => s + (i.amount || 0), 0);
+  const taxAmt = subtotal * (tax / 100);
+  const serviceAmt = subtotal * (service / 100);
+  const rawDiscountAmt = discountType === 'pct' ? subtotal * (discount / 100) : discount;
+  const discountAmt = Math.min(rawDiscountAmt, subtotal);
+  const grand = subtotal + taxAmt + serviceAmt - discountAmt;
+
+  const perPerson: Record<string, { items: number; tax: number; service: number; discount: number; share: number }> = {};
+  activePeopleIds.forEach(pid => { perPerson[pid] = { items: 0, tax: 0, service: 0, discount: 0, share: 0 }; });
+
+  items.forEach(it => {
+    const ppl = it.assigned.filter(pid => activePeopleIds.includes(pid));
+    if (ppl.length === 0) return;
+    if (it.mode === 'percent' && it.percents) {
+      ppl.forEach(pid => {
+        const pct = it.percents![pid] || 0;
+        if (perPerson[pid]) perPerson[pid].items += it.amount * (pct / 100);
+      });
+    } else {
+      const share = it.amount / ppl.length;
+      ppl.forEach(pid => { if (perPerson[pid]) perPerson[pid].items += share; });
+    }
+  });
+
+  activePeopleIds.forEach(pid => {
+    const base = perPerson[pid].items;
+    const ratio = subtotal > 0 ? base / subtotal : 0;
+    perPerson[pid].tax = taxAmt * ratio;
+    perPerson[pid].service = serviceAmt * ratio;
+    perPerson[pid].discount = discountAmt * ratio;
+    perPerson[pid].share = base + perPerson[pid].tax + perPerson[pid].service - perPerson[pid].discount;
+  });
+
+  return { subtotal, taxAmt, serviceAmt, discountAmt, grand, perPerson };
+}
