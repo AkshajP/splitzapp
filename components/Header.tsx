@@ -1,16 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ACCENT, ACCENT_INK } from '@/constants/theme';
-export type Tab = 'items' | 'summary' | 'people' | 'archive';
+export type Tab = 'items' | 'summary' | 'people';
 
 type T = typeof import('@/constants/theme').light;
 
 export function Header({
-  tab, setTab, activeCount, archiveCount, billTitle, onNewBill, isEditing, t,
+  tab, setTab, activeCount, archiveCount, billTitle, onNewBill, onArchive, archiveOpen, isEditing, t,
 }: {
   tab: Tab; setTab: (t: Tab) => void;
   activeCount: number; archiveCount: number;
   billTitle: string; onNewBill: () => void;
+  onArchive: () => void; archiveOpen: boolean;
   isEditing: boolean;
   t: T;
 }) {
@@ -31,15 +32,10 @@ export function Header({
         </View>
         <View style={s.actions}>
           <TouchableOpacity
-            style={[s.iconBtn, { backgroundColor: tab === 'archive' ? t.ink : t.surface, borderColor: tab === 'archive' ? t.ink : t.border }]}
-            onPress={() => setTab('archive')}
+            style={[s.iconBtn, { backgroundColor: archiveOpen ? t.ink : t.surface, borderColor: archiveOpen ? t.ink : t.border }]}
+            onPress={onArchive}
           >
-            <Text style={{ fontSize: 16, color: tab === 'archive' ? t.bg : t.ink }}>⊟</Text>
-            {archiveCount > 0 && (
-              <View style={[s.badge, { backgroundColor: ACCENT }]}>
-                <Text style={[s.badgeText, { color: ACCENT_INK }]}>{archiveCount}</Text>
-              </View>
-            )}
+            <Text style={{ fontSize: 16, color: archiveOpen ? t.bg : t.ink }}>⊟</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.iconBtn, { backgroundColor: ACCENT, borderColor: ACCENT }]} onPress={onNewBill}>
             <Text style={{ fontSize: 20, color: ACCENT_INK, lineHeight: 22 }}>+</Text>

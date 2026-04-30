@@ -11,7 +11,7 @@ import { PeopleStrip } from '@/components/PeopleStrip';
 import { ItemsScreen } from '@/components/ItemsScreen';
 import { SummaryScreen } from '@/components/SummaryScreen';
 import { PeopleScreen } from '@/components/PeopleScreen';
-import { ArchiveScreen } from '@/components/ArchiveScreen';
+import { ArchiveSheet } from '@/components/ArchiveSheet';
 import { ItemEditor } from '@/components/ItemEditor';
 import { PeoplePicker } from '@/components/PeoplePicker';
 import { NewBillSheet } from '@/components/NewBillSheet';
@@ -34,6 +34,7 @@ export default function MainScreen() {
   const [showPeoplePicker, setShowPeoplePicker] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showNewBill, setShowNewBill] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [viewingBill, setViewingBill] = useState<ArchivedBill | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -87,6 +88,8 @@ export default function MainScreen() {
         archiveCount={store.archive.length}
         billTitle={billTitle}
         onNewBill={() => setShowNewBill(true)}
+        onArchive={() => setShowArchive(v => !v)}
+        archiveOpen={showArchive}
         isEditing={store.items.length > 0}
         t={t}
       />
@@ -137,18 +140,11 @@ export default function MainScreen() {
             onToggle={store.togglePersonActive}
             onAdd={store.addPerson}
             onUpdateTags={store.updatePersonTags}
+            onDelete={store.deletePeople}
             t={t}
           />
         )}
       </View>
-      {resolvedTab === 'archive' && (
-        <ArchiveScreen
-          archive={store.archive}
-          onView={(bill) => setViewingBill(bill)}
-          onDelete={store.deleteArchivedBill}
-          t={t}
-        />
-      )}
 
       {editingItem && (
         <ItemEditor
@@ -180,6 +176,16 @@ export default function MainScreen() {
           onClose={() => setShowNewBill(false)}
           willArchive={store.items.length > 0}
           currentTitle={billTitle}
+          t={t}
+        />
+      )}
+
+      {showArchive && (
+        <ArchiveSheet
+          archive={store.archive}
+          onView={(bill) => { setViewingBill(bill); }}
+          onDelete={store.deleteArchivedBill}
+          onClose={() => setShowArchive(false)}
           t={t}
         />
       )}

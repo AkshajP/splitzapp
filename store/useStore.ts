@@ -242,6 +242,26 @@ export function useStore() {
     });
   }, []);
 
+  const deletePeople = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    setState(prev => {
+      const next: State = {
+        ...prev,
+        people: prev.people.filter(p => !set.has(p.id)),
+        activePeopleIds: prev.activePeopleIds.filter(id => !set.has(id)),
+        items: prev.items.map(it => ({
+          ...it,
+          assigned: it.assigned.filter(pid => !set.has(pid)),
+          percents: it.percents
+            ? Object.fromEntries(Object.entries(it.percents).filter(([k]) => !set.has(k)))
+            : undefined,
+        })),
+      };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return {
     ...state,
     loaded,
@@ -253,6 +273,7 @@ export function useStore() {
     startNewBill,
     updatePersonTags,
     deleteArchivedBill,
+    deletePeople,
   };
 }
 

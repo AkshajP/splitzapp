@@ -13,10 +13,11 @@ const HEIGHT_DEFAULT = SCREEN_H * 0.62;
 const HEIGHT_MAX = SCREEN_H * 0.94;
 
 export function Sheet({
-  title, onClose, children, footer, t,
+  title, onClose, children, footer, headerRight, titleBadge, t,
 }: {
   title: string; onClose: () => void;
-  children: React.ReactNode; footer?: React.ReactNode; t: T;
+  children: React.ReactNode; footer?: React.ReactNode;
+  headerRight?: React.ReactNode; titleBadge?: number; t: T;
 }) {
   const insets = useSafeAreaInsets();
   const height = useRef(new Animated.Value(0)).current;
@@ -71,10 +72,20 @@ export function Sheet({
           <View style={s.handle} {...panResponder.panHandlers}>
             <View style={[s.grab, { backgroundColor: t.borderStrong }]} />
             <View style={s.sheetH}>
-              <Text style={[s.sheetTitle, { color: t.ink }]}>{title}</Text>
-              <TouchableOpacity onPress={onClose} style={[s.closeBtn, { backgroundColor: t.surface2 }]}>
-                <Text style={{ color: t.ink, fontSize: 16 }}>✕</Text>
-              </TouchableOpacity>
+              <View style={s.titleRow}>
+                <Text style={[s.sheetTitle, { color: t.ink }]}>{title}</Text>
+                {titleBadge != null && titleBadge > 0 && (
+                  <View style={[s.titleBadge, { backgroundColor: t.surface2 }]}>
+                    <Text style={[s.titleBadgeText, { color: t.ink2 }]}>{titleBadge}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={s.sheetHRight}>
+                {headerRight}
+                <TouchableOpacity onPress={onClose} style={[s.closeBtn, { backgroundColor: t.surface2 }]}>
+                  <Text style={{ color: t.ink, fontSize: 16 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -111,7 +122,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sheetTitle: { fontSize: 17, fontWeight: '700' },
+  titleBadge: { height: 20, minWidth: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
+  titleBadgeText: { fontSize: 11, fontWeight: '600' },
+  sheetHRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1 },
   bodyContent: { padding: 16, paddingTop: 8 },
