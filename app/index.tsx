@@ -44,8 +44,8 @@ export default function MainScreen() {
     .filter(Boolean);
 
   const totals = useMemo(
-    () => computeTotals(store.items, store.activePeopleIds, store.tax, store.service, store.discount, store.discountType),
-    [store.items, store.activePeopleIds, store.tax, store.service, store.discount, store.discountType]
+    () => computeTotals(store.items, store.activePeopleIds, store.tax, store.service, store.discount, store.discountType, store.taxType, store.serviceType),
+    [store.items, store.activePeopleIds, store.tax, store.service, store.discount, store.discountType, store.taxType, store.serviceType]
   );
 
   if (!store.loaded) {
@@ -91,11 +91,15 @@ export default function MainScreen() {
           totals={totals}
           activePeople={activePeople}
           tax={store.tax}
+          taxType={store.taxType}
           service={store.service}
+          serviceType={store.serviceType}
           discount={store.discount}
           discountType={store.discountType}
           onChangeTax={(v) => store.update({ tax: v })}
+          onChangeTaxType={(v) => store.update({ taxType: v })}
           onChangeService={(v) => store.update({ service: v })}
+          onChangeServiceType={(v) => store.update({ serviceType: v })}
           onChangeDiscount={(v) => store.update({ discount: v })}
           onChangeDiscountType={(v) => store.update({ discountType: v })}
           onShare={() => setShowShare(true)}
@@ -126,6 +130,7 @@ export default function MainScreen() {
           itemId={editingItem}
           items={store.items}
           activePeople={activePeople}
+          recentItems={store.recentItems}
           onSave={(item) => { store.upsertItem(item); setEditingItem(null); }}
           onClose={() => setEditingItem(null)}
           onDelete={(id) => { store.deleteItem(id); setEditingItem(null); }}
@@ -146,7 +151,7 @@ export default function MainScreen() {
 
       {showNewBill && (
         <NewBillSheet
-          onConfirm={(title) => { store.startNewBill(title); showToast(store.items.length > 0 ? 'Bill archived' : 'Started fresh'); setShowNewBill(false); }}
+          onConfirm={() => { store.startNewBill(); showToast(store.items.length > 0 ? 'Bill archived' : 'Started fresh'); setShowNewBill(false); }}
           onClose={() => setShowNewBill(false)}
           willArchive={store.items.length > 0}
           currentTitle={store.billTitle}
@@ -169,8 +174,11 @@ export default function MainScreen() {
           activePeople={activePeople}
           items={store.items}
           tax={store.tax}
+          taxType={store.taxType}
           service={store.service}
+          serviceType={store.serviceType}
           discount={store.discount}
+          discountType={store.discountType}
           billTitle={store.billTitle}
           onClose={() => setShowShare(false)}
           onToast={showToast}

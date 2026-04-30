@@ -1,22 +1,29 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Share } from 'react-native';
 import { Sheet } from './Sheet';
-import { CURRENCY, ACCENT, ACCENT_INK, fmt, initials } from '@/constants/theme';
+import { CURRENCY, ACCENT, ACCENT_INK, fmt, initials, fmtDate, fmtTime } from '@/constants/theme';
 import type { Item, Person } from '@/store/useStore';
 
 type T = typeof import('@/constants/theme').light;
 type Totals = ReturnType<typeof import('@/store/useStore').computeTotals>;
 
 export function ShareSheet({
-  totals, activePeople, items, tax, service, discount, billTitle, onClose, onToast, t,
+  totals, activePeople, items, tax, taxType, service, serviceType,
+  discount, discountType, billTitle, onClose, onToast, t,
 }: {
   totals: Totals; activePeople: Person[]; items: Item[];
-  tax: number; service: number; discount: number; billTitle: string;
+  tax: number; taxType: 'amount' | 'pct';
+  service: number; serviceType: 'amount' | 'pct';
+  discount: number; discountType: 'amount' | 'pct';
+  billTitle: string;
   onClose: () => void; onToast: (msg: string) => void; t: T;
 }) {
+  const now = new Date();
+
   const buildText = () => {
     const lines: string[] = [];
-    lines.push('💸  Bill Split');
+    lines.push(`💸  Bill Split — ${billTitle}`);
+    lines.push(`    ${fmtDate(now)}  ${fmtTime(now)}`);
     lines.push('─────────────────');
     activePeople.forEach(p => {
       const pp = totals.perPerson[p.id] || { share: 0 };
@@ -24,7 +31,13 @@ export function ShareSheet({
     });
     lines.push('─────────────────');
     lines.push(`${'Total'.padEnd(12, ' ')}${CURRENCY}${fmt(totals.grand)}`);
-    lines.push(`(Tax ${tax}% · Service ${service}%${discount > 0 ? ` · Disc ${CURRENCY}${fmt(discount)}` : ''})`);
+    const taxStr = taxType === 'pct' ? `Tax ${tax}%` : `Tax ${CURRENCY}${fmt(tax)}`;
+    const svcStr = serviceType === 'pct' ? `Service ${service}%` : `Service ${CURRENCY}${fmt(service)}`;
+    let discStr = '';
+    if (discount > 0) {
+      discStr = ` · Discount ${discountType === 'pct' ? `${discount}%` : `${CURRENCY}${fmt(discount)}`}`;
+    }
+    lines.push(`(${taxStr} · ${svcStr}${discStr})`);
     return lines.join('\n');
   };
 
@@ -36,7 +49,7 @@ export function ShareSheet({
 
   return (
     <Sheet title="Share split" onClose={onClose} t={t}>
-      <View style={[s.shareCard, { backgroundColor: t.ink }]}>
+      <View style={s.shareCard}>
         <View style={s.shareH}>
           <Text style={s.shareTitle}>Bill Split</Text>
           <Text style={s.shareSub}>{billTitle} · {activePeople.length} people</Text>
@@ -76,7 +89,7 @@ export function ShareSheet({
 }
 
 const s = StyleSheet.create({
-  shareCard: { borderRadius: 16, padding: 18, marginBottom: 16, overflow: 'hidden' },
+  shareCard: { borderRadius: 16, padding: 18, marginBottom: 16, overflow: 'hidden', backgroundColor: '#181818' },
   shareH: { marginBottom: 14 },
   shareTitle: { fontSize: 18, fontWeight: '700', color: '#f5f5f0' },
   shareSub: { fontSize: 11, color: 'rgba(245,245,240,0.6)', marginTop: 2 },

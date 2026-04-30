@@ -7,9 +7,10 @@ import type { Item, Person } from '@/store/useStore';
 type T = typeof import('@/constants/theme').light;
 
 export function ItemEditor({
-  itemId, items, activePeople, onSave, onClose, onDelete, t,
+  itemId, items, activePeople, recentItems, onSave, onClose, onDelete, t,
 }: {
   itemId: string; items: Item[]; activePeople: Person[];
+  recentItems: string[];
   onSave: (item: Item) => void; onClose: () => void;
   onDelete: (id: string) => void; t: T;
 }) {
@@ -26,7 +27,7 @@ export function ItemEditor({
   );
   const [mode, setMode] = useState<'equal' | 'percent'>(existing?.mode || 'equal');
   const [amountError, setAmountError] = useState(false);
-  // Store as strings so TextInput doesn't fight the user when clearing a field
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [percentStrs, setPercentStrs] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     if (existing?.percents) Object.entries(existing.percents).forEach(([k, v]) => { init[k] = String(v); });
@@ -35,6 +36,10 @@ export function ItemEditor({
 
   const percents: Record<string, number> = {};
   Object.entries(percentStrs).forEach(([k, v]) => { percents[k] = parseFloat(v) || 0; });
+
+  const suggestions = name.trim().length > 0
+    ? recentItems.filter(r => r.toLowerCase().includes(name.toLowerCase()) && r.toLowerCase() !== name.toLowerCase()).slice(0, 5)
+    : [];
 
   const switchToPercent = () => {
     const ids = assigned.length > 0 ? assigned : activePeople.map(p => p.id);
@@ -102,8 +107,23 @@ export function ItemEditor({
             placeholder="e.g. Margherita pizza"
             placeholderTextColor={t.ink3}
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => { setName(v); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           />
+          {showSuggestions && suggestions.length > 0 && (
+            <View style={[s.dropdown, { backgroundColor: t.surface, borderColor: t.border }]}>
+              {suggestions.map((sug) => (
+                <TouchableOpacity
+                  key={sug}
+                  style={[s.dropdownItem, { borderBottomColor: t.border }]}
+                  onPress={() => { setName(sug); setShowSuggestions(false); }}
+                >
+                  <Text style={[s.dropdownText, { color: t.ink }]}>{sug}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
         <View style={s.field}>
           <Text style={[s.label, { color: amountError ? '#c2410c' : t.ink3 }]}>
@@ -222,6 +242,13 @@ const s = StyleSheet.create({
   field: { gap: 6 },
   label: { fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   input: { height: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
+  dropdown: {
+    borderRadius: 12, borderWidth: 1, overflow: 'hidden',
+  },
+  dropdownItem: {
+    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1,
+  },
+  dropdownText: { fontSize: 15 },
   amountRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, height: 48 },
   currency: { fontSize: 16, marginRight: 8 },
   amountInput: { flex: 1, fontSize: 18, fontWeight: '700', alignSelf: 'stretch' },
@@ -250,9 +277,9 @@ const s = StyleSheet.create({
   segText: { fontSize: 13, fontWeight: '600' },
   hint: { fontSize: 12, marginTop: 8, paddingHorizontal: 4 },
   pctList: { marginTop: 10, gap: 6 },
-  pctRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, borderRadius: 10, borderWidth: 1 },
+  pctRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, borderWidth: 1 },
   pctName: { flex: 1, fontSize: 13, fontWeight: '500' },
-  pctInput: { width: 56, height: 30, borderRadius: 8, borderWidth: 1, paddingHorizontal: 6, fontSize: 13, fontWeight: '600', textAlign: 'right' },
+  pctInput: { width: 56, height: 44, borderRadius: 8, borderWidth: 1, paddingHorizontal: 6, fontSize: 15, fontWeight: '600', textAlign: 'right' },
   affix: { fontSize: 13 },
   pctAmt: { fontSize: 12, minWidth: 60, textAlign: 'right' },
   pctTotal: { marginTop: 8, padding: 8, borderRadius: 8, alignItems: 'center' },

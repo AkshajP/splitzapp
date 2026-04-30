@@ -7,33 +7,43 @@ type T = typeof import('@/constants/theme').light;
 type Totals = ReturnType<typeof import('@/store/useStore').computeTotals>;
 
 export function SummaryScreen({
-  totals, activePeople, tax, service, discount, discountType,
-  onChangeTax, onChangeService, onChangeDiscount, onChangeDiscountType, onShare, t,
+  totals, activePeople, tax, taxType, service, serviceType, discount, discountType,
+  onChangeTax, onChangeTaxType, onChangeService, onChangeServiceType,
+  onChangeDiscount, onChangeDiscountType, onShare, t,
 }: {
   totals: Totals; activePeople: Person[];
-  tax: number; service: number; discount: number; discountType: 'amount' | 'pct';
-  onChangeTax: (v: number) => void; onChangeService: (v: number) => void; onChangeDiscount: (v: number) => void;
-  onChangeDiscountType: (v: 'amount' | 'pct') => void;
+  tax: number; taxType: 'amount' | 'pct';
+  service: number; serviceType: 'amount' | 'pct';
+  discount: number; discountType: 'amount' | 'pct';
+  onChangeTax: (v: number) => void; onChangeTaxType: (v: 'amount' | 'pct') => void;
+  onChangeService: (v: number) => void; onChangeServiceType: (v: 'amount' | 'pct') => void;
+  onChangeDiscount: (v: number) => void; onChangeDiscountType: (v: 'amount' | 'pct') => void;
   onShare: () => void; t: T;
 }) {
+  const taxLabel = taxType === 'pct' ? `Tax · ${tax}%` : `Tax · ${CURRENCY}${fmt(tax)}`;
+  const serviceLabel = serviceType === 'pct' ? `Service · ${service}%` : `Service · ${CURRENCY}${fmt(service)}`;
+  const discountLabel = discountType === 'pct' ? `Discount · ${discount}%` : `Discount · ${CURRENCY}${fmt(discount)}`;
+
   return (
     <ScrollView style={s.root} contentContainerStyle={[s.content, { gap: 12, paddingBottom: 32 }]}>
       <View style={[s.card, { backgroundColor: t.surface, borderColor: t.border }]}>
         <Text style={[s.cardH, { color: t.ink3 }]}>Charges</Text>
-        <ChargeRow label="Tax" value={tax} onChange={onChangeTax} suffix="%" t={t} />
+        <ChargeRow label="Tax" value={tax} onChange={onChangeTax}
+          chargeType={taxType} onChangeChargeType={onChangeTaxType} t={t} />
         <View style={[s.divider, { backgroundColor: t.border }]} />
-        <ChargeRow label="Service" value={service} onChange={onChangeService} suffix="%" t={t} />
+        <ChargeRow label="Service" value={service} onChange={onChangeService}
+          chargeType={serviceType} onChangeChargeType={onChangeServiceType} t={t} />
         <View style={[s.divider, { backgroundColor: t.border }]} />
         <ChargeRow label="Discount" value={discount} onChange={onChangeDiscount}
-          discountType={discountType} onChangeDiscountType={onChangeDiscountType} t={t} />
+          chargeType={discountType} onChangeChargeType={onChangeDiscountType} t={t} />
       </View>
 
       <View style={[s.card, { backgroundColor: t.surface, borderColor: t.border }]}>
         <Text style={[s.cardH, { color: t.ink3 }]}>Bill</Text>
         <BillLine label="Subtotal" value={`${CURRENCY}${fmt(totals.subtotal)}`} t={t} />
-        <BillLine label={`Tax · ${tax}%`} value={`+ ${CURRENCY}${fmt(totals.taxAmt)}`} t={t} />
-        <BillLine label={`Service · ${service}%`} value={`+ ${CURRENCY}${fmt(totals.serviceAmt)}`} t={t} />
-        {discount > 0 && <BillLine label={`Discount · ${discountType === 'pct' ? `${discount}%` : `${CURRENCY}${fmt(discount)}`}`} value={`− ${CURRENCY}${fmt(totals.discountAmt)}`} neg t={t} />}
+        <BillLine label={taxLabel} value={`+ ${CURRENCY}${fmt(totals.taxAmt)}`} t={t} />
+        <BillLine label={serviceLabel} value={`+ ${CURRENCY}${fmt(totals.serviceAmt)}`} t={t} />
+        {discount > 0 && <BillLine label={discountLabel} value={`− ${CURRENCY}${fmt(totals.discountAmt)}`} neg t={t} />}
         <BillLine label="Total" value={`${CURRENCY}${fmt(totals.grand)}`} total t={t} />
       </View>
 
@@ -68,36 +78,32 @@ export function SummaryScreen({
   );
 }
 
-function ChargeRow({ label, value, onChange, suffix, prefix, discountType, onChangeDiscountType, t }: {
+function ChargeRow({ label, value, onChange, chargeType, onChangeChargeType, t }: {
   label: string; value: number; onChange: (v: number) => void;
-  suffix?: string; prefix?: string;
-  discountType?: 'amount' | 'pct'; onChangeDiscountType?: (v: 'amount' | 'pct') => void;
+  chargeType: 'amount' | 'pct'; onChangeChargeType: (v: 'amount' | 'pct') => void;
   t: T;
 }) {
-  const isDiscount = discountType !== undefined;
-  const activeSuffix = isDiscount ? (discountType === 'pct' ? '%' : undefined) : suffix;
-  const activePrefix = isDiscount ? (discountType === 'amount' ? CURRENCY : undefined) : prefix;
+  const activeSuffix = chargeType === 'pct' ? '%' : undefined;
+  const activePrefix = chargeType === 'amount' ? CURRENCY : undefined;
 
   return (
     <View style={s.chargeRow}>
       <Text style={[s.chargeLabel, { color: t.ink }]}>{label}</Text>
       <View style={s.chargeRight}>
-        {isDiscount && (
-          <View style={[s.discountToggle, { backgroundColor: t.surface2 }]}>
-            <TouchableOpacity
-              style={[s.toggleTab, discountType === 'amount' && { backgroundColor: ACCENT }]}
-              onPress={() => onChangeDiscountType?.('amount')}
-            >
-              <Text style={[s.toggleTabText, { color: discountType === 'amount' ? ACCENT_INK : t.ink3 }]}>{CURRENCY}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.toggleTab, discountType === 'pct' && { backgroundColor: ACCENT }]}
-              onPress={() => onChangeDiscountType?.('pct')}
-            >
-              <Text style={[s.toggleTabText, { color: discountType === 'pct' ? ACCENT_INK : t.ink3 }]}>%</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <View style={[s.discountToggle, { backgroundColor: t.surface2 }]}>
+          <TouchableOpacity
+            style={[s.toggleTab, chargeType === 'amount' && { backgroundColor: ACCENT }]}
+            onPress={() => onChangeChargeType('amount')}
+          >
+            <Text style={[s.toggleTabText, { color: chargeType === 'amount' ? ACCENT_INK : t.ink3 }]}>{CURRENCY}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleTab, chargeType === 'pct' && { backgroundColor: ACCENT }]}
+            onPress={() => onChangeChargeType('pct')}
+          >
+            <Text style={[s.toggleTabText, { color: chargeType === 'pct' ? ACCENT_INK : t.ink3 }]}>%</Text>
+          </TouchableOpacity>
+        </View>
         <View style={[s.chargeInput, { backgroundColor: t.surface2 }]}>
           {activePrefix && <Text style={[s.affix, { color: t.ink2 }]}>{activePrefix}</Text>}
           <TextInput
@@ -132,8 +138,8 @@ const s = StyleSheet.create({
   chargeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   chargeRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chargeLabel: { fontSize: 14, fontWeight: '500' },
-  chargeInput: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, gap: 6 },
-  chargeInputText: { width: 60, fontSize: 14, fontWeight: '600', textAlign: 'right' },
+  chargeInput: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
+  chargeInputText: { width: 60, fontSize: 16, fontWeight: '600', textAlign: 'right' },
   affix: { fontSize: 13 },
   discountToggle: { flexDirection: 'row', borderRadius: 8, padding: 2, gap: 2, alignItems: 'center' },
   toggleTab: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center' },

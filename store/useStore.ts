@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useCallback } from 'react';
+import { autoTitle } from '@/constants/theme';
 
 export type Person = {
   id: string;
@@ -26,8 +27,11 @@ export type ArchivedBill = {
   items: { name: string; amount: number }[];
   perPerson: { name: string; color: string; share: number }[];
   tax?: number;
+  taxType?: 'amount' | 'pct';
   service?: number;
+  serviceType?: 'amount' | 'pct';
   discount?: number;
+  discountType?: 'amount' | 'pct';
 };
 
 type State = {
@@ -35,11 +39,14 @@ type State = {
   activePeopleIds: string[];
   items: Item[];
   tax: number;
+  taxType: 'amount' | 'pct';
   service: number;
+  serviceType: 'amount' | 'pct';
   discount: number;
   discountType: 'amount' | 'pct';
   billTitle: string;
   archive: ArchivedBill[];
+  recentItems: string[];
 };
 
 const STORAGE_KEY = 'splitzapp_state';
@@ -51,11 +58,14 @@ const DEFAULT_STATE: State = {
   activePeopleIds: [],
   items: [],
   tax: 5,
+  taxType: 'pct' as const,
   service: 10,
+  serviceType: 'pct' as const,
   discount: 0,
   discountType: 'amount' as const,
-  billTitle: 'New bill',
+  billTitle: autoTitle(),
   archive: [],
+  recentItems: [],
 };
 
 export function useStore() {
@@ -119,7 +129,11 @@ export function useStore() {
     setState(prev => {
       const idx = prev.items.findIndex(x => x.id === item.id);
       const items = idx === -1 ? [...prev.items, item] : prev.items.map((x, i) => i === idx ? item : x);
-      const next = { ...prev, items };
+      const name = item.name.trim();
+      const recentItems = name
+        ? [name, ...prev.recentItems.filter(r => r.toLowerCase() !== name.toLowerCase())].slice(0, 50)
+        : prev.recentItems;
+      const next = { ...prev, items, recentItems };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
@@ -133,12 +147,12 @@ export function useStore() {
     });
   }, []);
 
-  const startNewBill = useCallback((newTitle: string) => {
+  const startNewBill = useCallback((_newTitle?: string) => {
     setState(prev => {
       const activePeople = prev.activePeopleIds.map(id => prev.people.find(p => p.id === id)!).filter(Boolean);
       const subtotal = prev.items.reduce((s, i) => s + (i.amount || 0), 0);
-      const taxAmt = subtotal * (prev.tax / 100);
-      const serviceAmt = subtotal * (prev.service / 100);
+      const taxAmt = prev.taxType === 'amount' ? prev.tax : subtotal * (prev.tax / 100);
+      const serviceAmt = prev.serviceType === 'amount' ? prev.service : subtotal * (prev.service / 100);
       const rawDiscountAmt = prev.discountType === 'pct' ? subtotal * (prev.discount / 100) : prev.discount;
       const discountAmt = Math.min(rawDiscountAmt, subtotal);
       const grand = subtotal + taxAmt + serviceAmt - discountAmt;
@@ -172,7 +186,9 @@ export function useStore() {
               return base + taxAmt * ratio + serviceAmt * ratio - discountAmt * ratio;
             })(),
           })),
-          tax: prev.tax, service: prev.service, discount: prev.discount,
+          tax: prev.tax, taxType: prev.taxType,
+          service: prev.service, serviceType: prev.serviceType,
+          discount: prev.discount, discountType: prev.discountType,
         },
         ...prev.archive,
       ] : prev.archive;
@@ -181,10 +197,12 @@ export function useStore() {
         ...prev,
         items: [],
         tax: 5,
+        taxType: 'pct' as const,
         service: 10,
+        serviceType: 'pct' as const,
         discount: 0,
         discountType: 'amount' as const,
-        billTitle: newTitle || 'New bill',
+        billTitle: autoTitle(),
         archive: newArchive,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -232,10 +250,12 @@ export function computeTotals(
   service: number,
   discount: number,
   discountType: 'amount' | 'pct' = 'amount',
+  taxType: 'amount' | 'pct' = 'pct',
+  serviceType: 'amount' | 'pct' = 'pct',
 ) {
   const subtotal = items.reduce((s, i) => s + (i.amount || 0), 0);
-  const taxAmt = subtotal * (tax / 100);
-  const serviceAmt = subtotal * (service / 100);
+  const taxAmt = taxType === 'amount' ? tax : subtotal * (tax / 100);
+  const serviceAmt = serviceType === 'amount' ? service : subtotal * (service / 100);
   const rawDiscountAmt = discountType === 'pct' ? subtotal * (discount / 100) : discount;
   const discountAmt = Math.min(rawDiscountAmt, subtotal);
   const grand = subtotal + taxAmt + serviceAmt - discountAmt;

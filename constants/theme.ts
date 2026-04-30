@@ -1,5 +1,25 @@
 export const CURRENCY = '₹';
 
+export function autoTitle(): string {
+  const now = new Date();
+  const day = now.getDate();
+  const month = now.toLocaleString('en-US', { month: 'short' });
+  const h = now.getHours();
+  const period = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : h < 21 ? 'Evening' : 'Night';
+  return `${day} ${month} · ${period}`;
+}
+
+export function fmtDate(d: Date = new Date()): string {
+  const day = d.getDate();
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = String(d.getFullYear()).slice(2);
+  return `${day} ${month} '${year}`;
+}
+
+export function fmtTime(d: Date = new Date()): string {
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 export function fmt(n: number): string {
   const v = Math.round(n * 100) / 100;
   return v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
