@@ -22,7 +22,8 @@ export function ShareSheet({
 
   const buildText = () => {
     const lines: string[] = [];
-    lines.push(`💸  Bill Split — ${billTitle}`);
+    lines.push(`💸  Bill Split`);
+    lines.push(`    ${billTitle}`);
     lines.push(`    ${fmtDate(now)}  ${fmtTime(now)}`);
     lines.push('─────────────────');
     activePeople.forEach(p => {

@@ -48,6 +48,7 @@ type State = {
   billTitleLocked: boolean;
   archive: ArchivedBill[];
   recentItems: string[];
+  themeOverride: 'system' | 'light' | 'dark';
 };
 
 const STORAGE_KEY = 'splitzapp_state';
@@ -76,6 +77,7 @@ const DEFAULT_STATE: State = {
   billTitleLocked: false,
   archive: [],
   recentItems: [],
+  themeOverride: 'system',
 };
 
 export function useStore() {
@@ -220,9 +222,7 @@ export function useStore() {
         ...prev.archive,
       ] : prev.archive;
 
-      const nextActiveIds = prev.activePeopleIds.includes(SELF_ID)
-        ? prev.activePeopleIds
-        : [SELF_ID, ...prev.activePeopleIds];
+      const nextActiveIds = [SELF_ID];
 
       const next: State = {
         ...prev,
@@ -272,6 +272,11 @@ export function useStore() {
     });
   }, []);
 
+  const resetData = useCallback(() => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STATE));
+    setState(DEFAULT_STATE);
+  }, []);
+
   const deletePeople = useCallback((ids: string[]) => {
     const set = new Set(ids.filter(id => id !== SELF_ID));
     setState(prev => {
@@ -305,6 +310,7 @@ export function useStore() {
     deleteArchivedBill,
     renameArchivedBill,
     deletePeople,
+    resetData,
   };
 }
 

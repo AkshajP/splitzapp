@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   useColorScheme, ActivityIndicator, PanResponder,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore, computeTotals } from '@/store/useStore';
 import { ACCENT, ACCENT_INK, light, darkTheme, autoTitle } from '@/constants/theme';
@@ -18,16 +19,17 @@ import { NewBillSheet } from '@/components/NewBillSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { ArchivedBillSheet } from '@/components/ArchivedBillSheet';
 import { Toast } from '@/components/Toast';
+import { SettingsSheet } from '@/components/SettingsSheet';
 import type { ArchivedBill } from '@/store/useStore';
 
 const SWIPEABLE_TABS: Tab[] = ['people', 'items', 'summary'];
 
 export default function MainScreen() {
   const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const store = useStore();
+  const isDark = store.themeOverride === 'system' ? scheme === 'dark' : store.themeOverride === 'dark';
   const t = isDark ? darkTheme : light;
 
-  const store = useStore();
   const billTitle = store.billTitleLocked ? store.billTitle : autoTitle();
   const [tab, setTab] = useState<Tab | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export default function MainScreen() {
   const [showShare, setShowShare] = useState(false);
   const [showNewBill, setShowNewBill] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [viewingBill, setViewingBill] = useState<ArchivedBill | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -218,6 +221,24 @@ export default function MainScreen() {
         />
       )}
 
+      {resolvedTab === 'people' && <TouchableOpacity
+        style={[s.gearBtn, { backgroundColor: t.surface2, borderColor: t.border }]}
+        onPress={() => setShowSettings(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="settings-sharp" size={20} color={t.ink2} />
+      </TouchableOpacity>}
+
+      {showSettings && (
+        <SettingsSheet
+          themeOverride={store.themeOverride}
+          onChangeTheme={(v) => store.update({ themeOverride: v })}
+          onResetData={store.resetData}
+          onClose={() => setShowSettings(false)}
+          t={t}
+        />
+      )}
+
       {toast && <Toast message={toast} />}
     </SafeAreaView>
   );
@@ -227,4 +248,15 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   swipeArea: { flex: 1 },
+  gearBtn: {
+    position: 'absolute',
+    bottom: 24,
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
