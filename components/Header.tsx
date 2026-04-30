@@ -6,18 +6,27 @@ export type Tab = 'items' | 'summary' | 'people' | 'archive';
 type T = typeof import('@/constants/theme').light;
 
 export function Header({
-  tab, setTab, activeCount, archiveCount, billTitle, onNewBill, t,
+  tab, setTab, activeCount, archiveCount, billTitle, onNewBill, isEditing, t,
 }: {
   tab: Tab; setTab: (t: Tab) => void;
   activeCount: number; archiveCount: number;
   billTitle: string; onNewBill: () => void;
+  isEditing: boolean;
   t: T;
 }) {
   return (
     <View style={[s.header, { backgroundColor: t.bg }]}>
       <View style={s.top}>
         <View style={s.titles}>
-          <Text style={[s.eyebrow, { color: t.ink3 }]}>Current bill</Text>
+          <View style={s.eyebrowRow}>
+            <Text style={[s.eyebrow, { color: t.ink3 }]}>Current bill</Text>
+            {isEditing && (
+              <>
+                <View style={s.dot} />
+                <Text style={[s.eyebrow, { color: '#4CAF50' }]}>Editing</Text>
+              </>
+            )}
+          </View>
           <Text style={[s.title, { color: t.ink }]} numberOfLines={1}>{billTitle}</Text>
         </View>
         <View style={s.actions}>
@@ -39,11 +48,11 @@ export function Header({
       </View>
 
       <View style={[s.tabs, { backgroundColor: t.surface2 }]}>
-        {(['items', 'summary', 'people'] as Tab[]).map((id) => {
+        {(['people', 'items', 'summary'] as Tab[]).map((id) => {
           const labels: Record<string, string> = {
+            people: `People · ${activeCount}`,
             items: 'Items',
             summary: 'Split',
-            people: `People · ${activeCount}`,
           };
           const on = tab === id;
           return (
@@ -65,6 +74,8 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8 },
   top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingVertical: 8, marginBottom: 12 },
   titles: { flex: 1, minWidth: 0 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },
   eyebrow: { fontSize: 11, fontWeight: '500', letterSpacing: 1, textTransform: 'uppercase' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5, marginTop: 2 },
   actions: { flexDirection: 'row', gap: 8, alignItems: 'center' },

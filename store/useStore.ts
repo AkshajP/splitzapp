@@ -45,6 +45,7 @@ type State = {
   discount: number;
   discountType: 'amount' | 'pct';
   billTitle: string;
+  billTitleLocked: boolean;
   archive: ArchivedBill[];
   recentItems: string[];
 };
@@ -63,7 +64,8 @@ const DEFAULT_STATE: State = {
   serviceType: 'pct' as const,
   discount: 0,
   discountType: 'amount' as const,
-  billTitle: autoTitle(),
+  billTitle: '',
+  billTitleLocked: false,
   archive: [],
   recentItems: [],
 };
@@ -77,7 +79,13 @@ export function useStore() {
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
-          setState({ ...DEFAULT_STATE, ...parsed });
+          const merged = { ...DEFAULT_STATE, ...parsed };
+          // If no items, bill never started — treat title as unlocked
+          if (merged.items.length === 0) {
+            merged.billTitleLocked = false;
+            merged.billTitle = '';
+          }
+          setState(merged);
         } catch {}
       }
       setLoaded(true);
@@ -128,12 +136,16 @@ export function useStore() {
   const upsertItem = useCallback((item: Item) => {
     setState(prev => {
       const idx = prev.items.findIndex(x => x.id === item.id);
-      const items = idx === -1 ? [...prev.items, item] : prev.items.map((x, i) => i === idx ? item : x);
+      const isNew = idx === -1;
+      const items = isNew ? [...prev.items, item] : prev.items.map((x, i) => i === idx ? item : x);
       const name = item.name.trim();
       const recentItems = name
         ? [name, ...prev.recentItems.filter(r => r.toLowerCase() !== name.toLowerCase())].slice(0, 50)
         : prev.recentItems;
-      const next = { ...prev, items, recentItems };
+      // Lock title on first item added
+      const billTitleLocked = prev.billTitleLocked || (isNew && prev.items.length === 0);
+      const billTitle = billTitleLocked && !prev.billTitleLocked ? autoTitle() : prev.billTitle;
+      const next = { ...prev, items, recentItems, billTitle, billTitleLocked };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
@@ -202,7 +214,8 @@ export function useStore() {
         serviceType: 'pct' as const,
         discount: 0,
         discountType: 'amount' as const,
-        billTitle: autoTitle(),
+        billTitle: '',
+        billTitleLocked: false,
         archive: newArchive,
       };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));

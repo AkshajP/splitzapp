@@ -27,6 +27,7 @@ export function ItemEditor({
   );
   const [mode, setMode] = useState<'equal' | 'percent'>(existing?.mode || 'equal');
   const [amountError, setAmountError] = useState(false);
+  const [assignedError, setAssignedError] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [percentStrs, setPercentStrs] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -52,7 +53,11 @@ export function ItemEditor({
   };
 
   const togglePerson = (id: string) => {
-    setAssigned(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setAssigned(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (next.length > 0) setAssignedError(false);
+      return next;
+    });
   };
 
   const allActiveIds = activePeople.map(p => p.id);
@@ -62,11 +67,13 @@ export function ItemEditor({
   const totalPct = Object.values(percents).reduce((s, v) => s + (Number(v) || 0), 0);
 
   const save = () => {
-    if (amtNum <= 0) {
-      setAmountError(true);
-      return;
-    }
+    const noAmount = amtNum <= 0;
+    const noAssigned = assigned.length === 0;
+    if (noAmount) setAmountError(true);
+    if (noAssigned) setAssignedError(true);
+    if (noAmount || noAssigned) return;
     setAmountError(false);
+    setAssignedError(false);
     onSave({
       id: existing?.id || ('i' + Date.now()),
       name: name.trim(),
@@ -146,8 +153,10 @@ export function ItemEditor({
 
       <View style={s.section}>
         <View style={s.sectionH}>
-          <Text style={[s.sectionLabel, { color: t.ink3 }]}>Split between</Text>
-          <TouchableOpacity onPress={() => setAssigned(allOn ? [] : [...allActiveIds])}>
+          <Text style={[s.sectionLabel, { color: assignedError ? '#c2410c' : t.ink3 }]}>
+            Split between{assignedError ? ' — select at least one' : ''}
+          </Text>
+          <TouchableOpacity onPress={() => { setAssigned(allOn ? [] : [...allActiveIds]); if (!allOn) setAssignedError(false); }}>
             <Text style={[s.linkBtn, { color: t.ink2 }]}>{allOn ? 'Clear' : 'Everyone'}</Text>
           </TouchableOpacity>
         </View>

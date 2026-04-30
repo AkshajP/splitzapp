@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStore, computeTotals } from '@/store/useStore';
-import { ACCENT, ACCENT_INK, light, darkTheme } from '@/constants/theme';
+import { ACCENT, ACCENT_INK, light, darkTheme, autoTitle } from '@/constants/theme';
 import { Header, type Tab } from '@/components/Header';
 import { PeopleStrip } from '@/components/PeopleStrip';
 import { ItemsScreen } from '@/components/ItemsScreen';
@@ -26,7 +26,8 @@ export default function MainScreen() {
   const t = isDark ? darkTheme : light;
 
   const store = useStore();
-  const [tab, setTab] = useState<Tab>('items');
+  const billTitle = store.billTitleLocked ? store.billTitle : autoTitle();
+  const [tab, setTab] = useState<Tab | null>(null);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [showPeoplePicker, setShowPeoplePicker] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -56,15 +57,18 @@ export default function MainScreen() {
     );
   }
 
+  const resolvedTab = tab ?? (store.items.length > 0 ? 'items' : 'people');
+
   return (
     <SafeAreaView style={[s.root, { backgroundColor: t.bg }]}>
       <Header
-        tab={tab}
+        tab={resolvedTab}
         setTab={setTab}
         activeCount={store.activePeopleIds.length}
         archiveCount={store.archive.length}
-        billTitle={store.billTitle}
+        billTitle={billTitle}
         onNewBill={() => setShowNewBill(true)}
+        isEditing={store.items.length > 0}
         t={t}
       />
       <PeopleStrip
@@ -74,7 +78,7 @@ export default function MainScreen() {
         t={t}
       />
 
-      {tab === 'items' && (
+      {resolvedTab === 'items' && (
         <ItemsScreen
           items={store.items}
           people={store.people}
@@ -86,7 +90,7 @@ export default function MainScreen() {
           t={t}
         />
       )}
-      {tab === 'summary' && (
+      {resolvedTab === 'summary' && (
         <SummaryScreen
           totals={totals}
           activePeople={activePeople}
@@ -106,7 +110,7 @@ export default function MainScreen() {
           t={t}
         />
       )}
-      {tab === 'people' && (
+      {resolvedTab === 'people' && (
         <PeopleScreen
           people={store.people}
           activeIds={store.activePeopleIds}
@@ -116,7 +120,7 @@ export default function MainScreen() {
           t={t}
         />
       )}
-      {tab === 'archive' && (
+      {resolvedTab === 'archive' && (
         <ArchiveScreen
           archive={store.archive}
           onView={(bill) => setViewingBill(bill)}
@@ -154,7 +158,7 @@ export default function MainScreen() {
           onConfirm={() => { store.startNewBill(); showToast(store.items.length > 0 ? 'Bill archived' : 'Started fresh'); setShowNewBill(false); }}
           onClose={() => setShowNewBill(false)}
           willArchive={store.items.length > 0}
-          currentTitle={store.billTitle}
+          currentTitle={billTitle}
           t={t}
         />
       )}
@@ -179,7 +183,7 @@ export default function MainScreen() {
           serviceType={store.serviceType}
           discount={store.discount}
           discountType={store.discountType}
-          billTitle={store.billTitle}
+          billTitle={billTitle}
           onClose={() => setShowShare(false)}
           onToast={showToast}
           t={t}
