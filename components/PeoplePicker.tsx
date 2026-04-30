@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Sheet } from './Sheet';
 import { ACCENT, ACCENT_INK, initials } from '@/constants/theme';
+import { SELF_ID } from '@/store/useStore';
 import type { Person } from '@/store/useStore';
 
 type T = typeof import('@/constants/theme').light;
@@ -15,14 +16,17 @@ export function PeoplePicker({
 }) {
   const [name, setName] = useState('');
   const [tag, setTag] = useState('all');
-  const allTags = [...new Set(people.flatMap(p => p.tags))];
+
+  const selfPerson = people.find(p => p.id === SELF_ID);
+  const otherPeople = people.filter(p => p.id !== SELF_ID);
+  const allTags = [...new Set(otherPeople.flatMap(p => p.tags))];
 
   const submit = () => {
     if (name.trim()) { onAdd(name); setName(''); }
   };
 
-  const filtered = tag === 'all' ? people : people.filter(p => p.tags.includes(tag));
-  const recents = [...people].slice(-4).reverse();
+  const filtered = tag === 'all' ? otherPeople : otherPeople.filter(p => p.tags.includes(tag));
+  const recents = [...otherPeople].slice(-4).reverse();
 
   return (
     <Sheet title="Who's in?" onClose={onClose} t={t}>
@@ -41,6 +45,31 @@ export function PeoplePicker({
           <Text style={[s.addBtnText, { color: ACCENT_INK }]}>Add</Text>
         </TouchableOpacity>
       </View>
+
+      {selfPerson && (
+        <View style={s.section}>
+          <Text style={[s.sectionLabel, { color: t.ink3 }]}>You</Text>
+          <View style={s.pickerGrid}>
+            {(() => {
+              const p = selfPerson;
+              const on = activeIds.includes(p.id);
+              return (
+                <TouchableOpacity key={p.id} style={[s.pick, { backgroundColor: t.surface, borderColor: on ? ACCENT : t.border }, on && s.pickOn]} onPress={() => onToggle(p.id)}>
+                  <View style={[s.avatarSm, { backgroundColor: p.color }]}>
+                    <Text style={s.avatarSmText}>{initials(p.name)}</Text>
+                  </View>
+                  <Text style={[s.pickName, { color: t.ink }]} numberOfLines={1}>{p.name}</Text>
+                  {on && (
+                    <View style={[s.pickTick, { backgroundColor: ACCENT }]}>
+                      <Text style={{ color: ACCENT_INK, fontSize: 10 }}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
+        </View>
+      )}
 
       {recents.length > 0 && tag === 'all' && (
         <View style={s.section}>

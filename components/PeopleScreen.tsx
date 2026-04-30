@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { initials, ACCENT, ACCENT_INK } from "@/constants/theme";
+import { SELF_ID } from "@/store/useStore";
 import type { Person } from "@/store/useStore";
 
 type T = typeof import("@/constants/theme").light;
@@ -49,10 +50,13 @@ export function PeopleScreen({
     }
   };
 
+  const selfPerson = people.find((p) => p.id === SELF_ID);
+  const otherPeople = people.filter((p) => p.id !== SELF_ID);
+
   const filtered =
     activeTag === "all"
-      ? people
-      : people.filter((p) => p.tags.includes(activeTag));
+      ? otherPeople
+      : otherPeople.filter((p) => p.tags.includes(activeTag));
 
   const enterSelect = (id: string) => {
     setSelecting(true);
@@ -174,7 +178,7 @@ export function PeopleScreen({
                 { color: activeTag === "all" ? t.bg : t.ink2 },
               ]}
             >
-              All · {people.length}
+              All · {otherPeople.length}
             </Text>
           </TouchableOpacity>
           {allTagsMerged.map((tag) => {
@@ -207,6 +211,104 @@ export function PeopleScreen({
             <Text style={[s.tagText, { color: t.ink3 }]}>+ tag</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* You (self) section — always shown, not deletable */}
+        {selfPerson && (
+          <>
+            <View style={s.sectionH}>
+              <Text style={[s.sectionLabel, { color: t.ink3 }]}>You</Text>
+            </View>
+            <View style={s.list}>
+              {(() => {
+                const p = selfPerson;
+                const on = activeIds.includes(p.id);
+                const expanded = expandedId === p.id;
+                return (
+                  <View
+                    key={p.id}
+                    style={[
+                      s.card,
+                      {
+                        backgroundColor: t.surface,
+                        borderColor: on ? ACCENT : t.border,
+                      },
+                    ]}
+                  >
+                    <View style={s.personRow}>
+                      <TouchableOpacity
+                        style={s.personTouchable}
+                        onPress={() => onToggle(p.id)}
+                      >
+                        <View style={[s.avatar, { backgroundColor: p.color }]}>
+                          <Text style={s.avatarText}>{initials(p.name)}</Text>
+                        </View>
+                        <View style={s.personMeta}>
+                          <View style={s.selfNameRow}>
+                            <Text style={[s.personName, { color: t.ink }]}>{p.name}</Text>
+                            <View style={[s.youBadge, { borderColor: t.border }]}>
+                              <Text style={[s.youBadgeText, { color: t.ink3 }]}>you</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          s.hashBtn,
+                          {
+                            borderColor: expanded ? t.ink : t.border,
+                            backgroundColor: expanded ? t.ink : "transparent",
+                          },
+                        ]}
+                        onPress={() => setExpandedId(expanded ? null : p.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={[s.hashText, { color: expanded ? t.bg : t.ink3 }]}>#</Text>
+                      </TouchableOpacity>
+                      <View
+                        style={[
+                          s.check,
+                          {
+                            borderColor: on ? ACCENT : t.borderStrong,
+                            backgroundColor: on ? ACCENT : "transparent",
+                          },
+                        ]}
+                      >
+                        {on && <Text style={{ color: ACCENT_INK, fontSize: 12 }}>✓</Text>}
+                      </View>
+                    </View>
+                    {expanded && (
+                      <View style={[s.tagPanel, { borderTopColor: t.border }]}>
+                        {allTagsMerged.length > 0 ? (
+                          <View style={s.tagPills}>
+                            {allTagsMerged.map((tag) => {
+                              const has = p.tags.includes(tag);
+                              return (
+                                <TouchableOpacity
+                                  key={tag}
+                                  style={[
+                                    s.tagPill,
+                                    has
+                                      ? { backgroundColor: t.ink, borderColor: t.ink }
+                                      : { backgroundColor: "transparent", borderColor: t.borderStrong },
+                                  ]}
+                                  onPress={() => toggleTag(p, tag)}
+                                >
+                                  <Text style={[s.tagPillText, { color: has ? t.bg : t.ink2 }]}>{tag}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        ) : (
+                          <Text style={[s.hint, { color: t.ink3 }]}>No tags yet — create one with + tag above</Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+            </View>
+          </>
+        )}
 
         <View style={s.sectionH}>
           <Text style={[s.sectionLabel, { color: t.ink3 }]}>
@@ -638,6 +740,17 @@ const s = StyleSheet.create({
   hint: { fontSize: 11, fontStyle: "italic" },
 
   emptyP: { fontSize: 14, textAlign: "center", paddingVertical: 20 },
+
+  selfNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  youBadge: {
+    height: 16,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  youBadgeText: { fontSize: 9, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase" },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {

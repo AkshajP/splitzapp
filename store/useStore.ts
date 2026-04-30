@@ -52,11 +52,19 @@ type State = {
 
 const STORAGE_KEY = 'splitzapp_state';
 
+export const SELF_ID = 'self';
+export const SELF_PERSON: Person = {
+  id: SELF_ID,
+  name: 'Me',
+  tags: [],
+  color: '#a78bfa',
+};
+
 const COLORS = ['#7dd3c0','#fbbf77','#f9a8d4','#a5b4fc','#fcd34d','#86efac','#fda4af','#93c5fd','#c4b5fd','#fde68a'];
 
 const DEFAULT_STATE: State = {
-  people: [],
-  activePeopleIds: [],
+  people: [SELF_PERSON],
+  activePeopleIds: [SELF_ID],
   items: [],
   tax: 18,
   taxType: 'pct' as const,
@@ -80,6 +88,13 @@ export function useStore() {
         try {
           const parsed = JSON.parse(raw);
           const merged = { ...DEFAULT_STATE, ...parsed };
+          // Ensure self person is always present
+          if (!merged.people.find((p: Person) => p.id === SELF_ID)) {
+            merged.people = [SELF_PERSON, ...merged.people];
+          }
+          if (!merged.activePeopleIds.includes(SELF_ID)) {
+            merged.activePeopleIds = [SELF_ID, ...merged.activePeopleIds];
+          }
           // If no items, bill never started — treat title as unlocked
           if (merged.items.length === 0) {
             merged.billTitleLocked = false;
@@ -205,8 +220,13 @@ export function useStore() {
         ...prev.archive,
       ] : prev.archive;
 
+      const nextActiveIds = prev.activePeopleIds.includes(SELF_ID)
+        ? prev.activePeopleIds
+        : [SELF_ID, ...prev.activePeopleIds];
+
       const next: State = {
         ...prev,
+        activePeopleIds: nextActiveIds,
         items: [],
         tax: 18,
         taxType: 'pct' as const,
@@ -243,7 +263,7 @@ export function useStore() {
   }, []);
 
   const deletePeople = useCallback((ids: string[]) => {
-    const set = new Set(ids);
+    const set = new Set(ids.filter(id => id !== SELF_ID));
     setState(prev => {
       const next: State = {
         ...prev,
