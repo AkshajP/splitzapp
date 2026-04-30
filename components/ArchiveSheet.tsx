@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Sheet } from './Sheet';
 import { CURRENCY, fmt, initials } from '@/constants/theme';
 import type { ArchivedBill } from '@/store/useStore';
@@ -7,16 +7,19 @@ import type { ArchivedBill } from '@/store/useStore';
 type T = typeof import('@/constants/theme').light;
 
 export function ArchiveSheet({
-  archive, onView, onDelete, onClose, t,
+  archive, onView, onDelete, onRename, onClose, t,
 }: {
   archive: ArchivedBill[];
   onView: (b: ArchivedBill) => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => void;
   onClose: () => void;
   t: T;
 }) {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const enterSelect = (id: string) => {
     setSelecting(true);
@@ -37,6 +40,18 @@ export function ArchiveSheet({
   const confirmDelete = () => {
     selected.forEach(id => onDelete(id));
     cancelSelect();
+  };
+
+  const startRename = (b: ArchivedBill) => {
+    setRenamingId(b.id);
+    setRenameValue(b.title);
+  };
+
+  const commitRename = () => {
+    if (renamingId && renameValue.trim()) {
+      onRename(renamingId, renameValue);
+    }
+    setRenamingId(null);
   };
 
   return (
@@ -70,17 +85,51 @@ export function ArchiveSheet({
         <View style={s.list}>
           {archive.map(b => {
             const isSelected = selected.has(b.id);
+            const isRenaming = renamingId === b.id;
             return (
               <TouchableOpacity
                 key={b.id}
                 style={[s.card, { backgroundColor: t.surface, borderColor: selecting ? (isSelected ? '#EF4444' : t.border) : t.border }]}
-                onPress={() => selecting ? toggleSelect(b.id) : onView(b)}
-                onLongPress={() => !selecting && enterSelect(b.id)}
+                onPress={() => {
+                  if (isRenaming) return;
+                  selecting ? toggleSelect(b.id) : onView(b);
+                }}
+                onLongPress={() => !selecting && !isRenaming && enterSelect(b.id)}
                 delayLongPress={400}
+                activeOpacity={isRenaming ? 1 : 0.7}
               >
                 <View style={s.row1}>
-                  <Text style={[s.arcTitle, { color: selecting && isSelected ? '#EF4444' : t.ink }]}>{b.title}</Text>
-                  <Text style={[s.arcTotal, { color: selecting && isSelected ? '#EF4444' : t.ink }]}>{CURRENCY}{fmt(b.total)}</Text>
+                  {isRenaming ? (
+                    <TextInput
+                      style={[s.renameInput, { color: t.ink, borderBottomColor: t.border }]}
+                      value={renameValue}
+                      onChangeText={setRenameValue}
+                      onSubmitEditing={commitRename}
+                      onBlur={commitRename}
+                      returnKeyType="done"
+                      autoFocus
+                      selectTextOnFocus
+                    />
+                  ) : (
+                    <Text style={[s.arcTitle, { color: selecting && isSelected ? '#EF4444' : t.ink, flex: 1 }]}>{b.title}</Text>
+                  )}
+                  <View style={s.row1Right}>
+                    {!selecting && !isRenaming && (
+                      <TouchableOpacity
+                        onPress={() => startRename(b)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={[s.renameIcon, { color: t.ink3 }]}>✎</Text>
+                      </TouchableOpacity>
+                    )}
+                    {isRenaming ? (
+                      <TouchableOpacity onPress={commitRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={[s.renameDone, { color: t.ink }]}>Done</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={[s.arcTotal, { color: selecting && isSelected ? '#EF4444' : t.ink }]}>{CURRENCY}{fmt(b.total)}</Text>
+                    )}
+                  </View>
                 </View>
                 <View style={s.row2}>
                   <View style={s.avatars}>
@@ -113,9 +162,19 @@ const s = StyleSheet.create({
   emptyH: { fontSize: 18, fontWeight: '600', marginTop: 8 },
   emptyP: { fontSize: 14, marginTop: 4 },
   card: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 10 },
-  row1: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  row1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  row1Right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   arcTitle: { fontSize: 15, fontWeight: '600' },
   arcTotal: { fontSize: 16, fontWeight: '700' },
+  renameIcon: { fontSize: 16 },
+  renameInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    borderBottomWidth: 1,
+    paddingVertical: 2,
+  },
+  renameDone: { fontSize: 13, fontWeight: '600' },
   row2: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   avatars: { flexDirection: 'row', alignItems: 'center' },
   avatarSm: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff' },

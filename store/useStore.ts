@@ -174,7 +174,7 @@ export function useStore() {
     });
   }, []);
 
-  const startNewBill = useCallback((_newTitle?: string) => {
+  const startNewBill = useCallback((archiveTitle?: string) => {
     setState(prev => {
       const activePeople = prev.activePeopleIds.map(id => prev.people.find(p => p.id === id)!).filter(Boolean);
       const subtotal = prev.items.reduce((s, i) => s + (i.amount || 0), 0);
@@ -200,7 +200,7 @@ export function useStore() {
       const newArchive: ArchivedBill[] = prev.items.length > 0 ? [
         {
           id: 'b' + Date.now(),
-          title: prev.billTitle,
+          title: (archiveTitle?.trim()) || prev.billTitle,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           total: grand,
           peopleCount: prev.activePeopleIds.length,
@@ -262,6 +262,16 @@ export function useStore() {
     });
   }, []);
 
+  const renameArchivedBill = useCallback((id: string, title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    setState(prev => {
+      const next = { ...prev, archive: prev.archive.map(b => b.id === id ? { ...b, title: trimmed } : b) };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const deletePeople = useCallback((ids: string[]) => {
     const set = new Set(ids.filter(id => id !== SELF_ID));
     setState(prev => {
@@ -293,6 +303,7 @@ export function useStore() {
     startNewBill,
     updatePersonTags,
     deleteArchivedBill,
+    renameArchivedBill,
     deletePeople,
   };
 }

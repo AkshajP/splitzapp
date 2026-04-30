@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Sheet } from "./Sheet";
 import { ACCENT, ACCENT_INK, autoTitle } from "@/constants/theme";
 
@@ -12,13 +12,13 @@ export function NewBillSheet({
   currentTitle,
   t,
 }: {
-  onConfirm: () => void;
+  onConfirm: (archiveTitle?: string) => void;
   onClose: () => void;
   willArchive: boolean;
   currentTitle: string;
   t: T;
 }) {
-  const [newTitle] = useState(() => autoTitle());
+  const [editedTitle, setEditedTitle] = useState(currentTitle);
 
   return (
     <Sheet
@@ -35,7 +35,7 @@ export function NewBillSheet({
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.primaryBtn, { backgroundColor: ACCENT }]}
-            onPress={onConfirm}
+            onPress={() => onConfirm(willArchive ? editedTitle : undefined)}
           >
             <Text style={[s.primaryText, { color: ACCENT_INK }]}>
               {willArchive ? "Archive & start" : "Start fresh"}
@@ -44,30 +44,28 @@ export function NewBillSheet({
         </View>
       }
     >
-      {willArchive && (
-        <View
-          style={[
-            s.banner,
-            {
-              backgroundColor: "rgba(200,255,62,0.14)",
-              borderColor: "rgba(200,255,62,0.28)",
-            },
-          ]}
-        >
-          <Text style={[s.bannerText, { color: t.ink }]}>
-            <Text style={{ fontWeight: "700" }}>"{currentTitle}"</Text> will be
-            saved to your archive.
+      {willArchive ? (
+        <View style={s.archiveSection}>
+          <Text style={[s.fieldLabel, { color: t.ink3 }]}>Bill name</Text>
+          <TextInput
+            style={[s.titleInput, { backgroundColor: t.surface, borderColor: t.border, color: t.ink }]}
+            value={editedTitle}
+            onChangeText={setEditedTitle}
+            onSubmitEditing={() => onConfirm(editedTitle)}
+            returnKeyType="done"
+            selectTextOnFocus
+          />
+          <Text style={[s.hint, { color: t.ink3 }]}>This bill will be saved to your archive.</Text>
+        </View>
+      ) : (
+        <View style={s.titlePreview}>
+          <Text style={[s.titleLabel, { color: t.ink3 }]}>Bill Title:</Text>
+          <Text style={[s.titleValue, { color: t.ink }]}>{autoTitle()}</Text>
+          <Text style={[{ color: t.ink3 }]}>
+            Title is set based on time when first item is added
           </Text>
         </View>
       )}
-
-      <View style={s.titlePreview}>
-        <Text style={[s.titleLabel, { color: t.ink3 }]}>Bill Title:</Text>
-        <Text style={[s.titleValue, { color: t.ink }]}>{newTitle}</Text>
-        <Text style={[{ color: t.ink3 }]}>
-          Title changes based on time when first item is added
-        </Text>
-      </View>
     </Sheet>
   );
 }
@@ -90,16 +88,22 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   primaryText: { fontSize: 15, fontWeight: "700" },
-  banner: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-    padding: 12,
+  archiveSection: { gap: 8, paddingVertical: 4 },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  titleInput: {
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    fontSize: 20,
+    fontWeight: "700",
   },
-  bannerText: { fontSize: 13, flex: 1 },
+  hint: { fontSize: 12 },
   titlePreview: { gap: 8, paddingVertical: 8 },
   titleLabel: {
     fontSize: 11,

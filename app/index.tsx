@@ -172,7 +172,7 @@ export default function MainScreen() {
 
       {showNewBill && (
         <NewBillSheet
-          onConfirm={() => { store.startNewBill(); showToast(store.items.length > 0 ? 'Bill archived' : 'Started fresh'); setShowNewBill(false); }}
+          onConfirm={(archiveTitle) => { store.startNewBill(archiveTitle); showToast(store.items.length > 0 ? 'Bill archived' : 'Started fresh'); setShowNewBill(false); setTab('people'); }}
           onClose={() => setShowNewBill(false)}
           willArchive={store.items.length > 0}
           currentTitle={billTitle}
@@ -185,6 +185,7 @@ export default function MainScreen() {
           archive={store.archive}
           onView={(bill) => { setViewingBill(bill); }}
           onDelete={store.deleteArchivedBill}
+          onRename={store.renameArchivedBill}
           onClose={() => setShowArchive(false)}
           t={t}
         />
