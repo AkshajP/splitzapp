@@ -58,7 +58,7 @@ const DEFAULT_STATE: State = {
   people: [],
   activePeopleIds: [],
   items: [],
-  tax: 5,
+  tax: 18,
   taxType: 'pct' as const,
   service: 10,
   serviceType: 'pct' as const,
@@ -208,7 +208,7 @@ export function useStore() {
       const next: State = {
         ...prev,
         items: [],
-        tax: 5,
+        tax: 18,
         taxType: 'pct' as const,
         service: 10,
         serviceType: 'pct' as const,

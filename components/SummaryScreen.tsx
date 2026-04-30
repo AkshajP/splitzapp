@@ -90,6 +90,12 @@ function ChargeRow({ label, value, onChange, chargeType, onChangeChargeType, t }
     <View style={s.chargeRow}>
       <Text style={[s.chargeLabel, { color: t.ink }]}>{label}</Text>
       <View style={s.chargeRight}>
+        <TouchableOpacity
+          style={[s.zeroBtn, { backgroundColor: t.surface2 }]}
+          onPress={() => onChange(0)}
+        >
+          <Text style={[s.zeroBtnText, { color: t.ink3 }]}>0</Text>
+        </TouchableOpacity>
         <View style={[s.discountToggle, { backgroundColor: t.surface2 }]}>
           <TouchableOpacity
             style={[s.toggleTab, chargeType === 'amount' && { backgroundColor: ACCENT }]}
@@ -141,9 +147,11 @@ const s = StyleSheet.create({
   chargeInput: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chargeInputText: { width: 60, fontSize: 16, fontWeight: '600', textAlign: 'right' },
   affix: { fontSize: 13 },
-  discountToggle: { flexDirection: 'row', borderRadius: 8, padding: 2, gap: 2, alignItems: 'center' },
-  toggleTab: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center' },
-  toggleTabText: { fontSize: 13, fontWeight: '600' },
+  zeroBtn: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
+  zeroBtnText: { fontSize: 16, fontWeight: '600' },
+  discountToggle: { flexDirection: 'row', borderRadius: 10, padding: 2, gap: 2, alignItems: 'center' },
+  toggleTab: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+  toggleTabText: { fontSize: 15, fontWeight: '600' },
   billLine: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   billTotal: { borderTopWidth: 1, marginTop: 6, paddingTop: 12 },
   billLabel: { fontSize: 14 },
