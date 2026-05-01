@@ -42,6 +42,7 @@ jobs:
           fi
 
           echo "tag=v${MAJOR}.${MINOR}" >> "$GITHUB_OUTPUT"
+          echo "Computed tag: v${MAJOR}.${MINOR}"
 
       - name: Setup Node
         uses: actions/setup-node@v4
