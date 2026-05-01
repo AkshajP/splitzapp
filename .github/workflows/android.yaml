@@ -2,6 +2,11 @@ name: Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      bump_major:
+        description: "Bump major version? (yes/no)"
+        required: false
+        default: "no"
 
 permissions:
   contents: write
@@ -9,10 +14,34 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed to read all tags
+
+      - name: Compute next version
+        id: version
+        run: |
+          # Get the latest vMAJOR.MINOR tag, defaulting to v0.0 if none exist
+          LATEST=$(git tag --list 'v*.*' --sort=-v:refname | head -n 1)
+          if [ -z "$LATEST" ]; then
+            MAJOR=0
+            MINOR=0
+          else
+            VERSION="${LATEST#v}"        # strip leading 'v'
+            MAJOR="${VERSION%%.*}"
+            MINOR="${VERSION##*.}"
+          fi
+
+          if [ "${{ github.event.inputs.bump_major }}" = "yes" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+          else
+            MINOR=$((MINOR + 1))
+          fi
+
+          echo "tag=v${MAJOR}.${MINOR}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,7 +68,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
+          tag_name: ${{ steps.version.outputs.tag }}
           files: |
             android/app/build/outputs/apk/release/app-release.apk
             android/app/build/outputs/bundle/release/app-release.aab
