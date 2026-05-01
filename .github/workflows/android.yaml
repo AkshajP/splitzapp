@@ -1,4 +1,4 @@
-name: Android APK
+name: Android APK + AAB Release
 
 on:
   workflow_dispatch:
@@ -18,18 +18,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # needed to read all tags
+          fetch-depth: 0
 
       - name: Compute next version
         id: version
         run: |
-          # Get the latest vMAJOR.MINOR tag, defaulting to v0.0 if none exist
           LATEST=$(git tag --list 'v*.*' --sort=-v:refname | head -n 1)
           if [ -z "$LATEST" ]; then
             MAJOR=0
             MINOR=0
           else
-            VERSION="${LATEST#v}"        # strip leading 'v'
+            VERSION="${LATEST#v}"
             MAJOR="${VERSION%%.*}"
             MINOR="${VERSION##*.}"
           fi
@@ -49,22 +48,49 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build APK
+      - name: Build APK + AAB
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease bundleRelease
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
