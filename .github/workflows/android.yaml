@@ -81,6 +81,17 @@ jobs:
           pwd
           ls -la
 
+      - name: Debug pnpm binary
+        run: |
+          which pnpm
+          pnpm --version
+          cat $(which pnpm) | head -5 2>/dev/null || echo "not a plain script"
+      - name: Debug pnpm config
+        run: |
+          pnpm config list
+          echo "---"
+          pnpm config get onlyBuiltDependencies
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
