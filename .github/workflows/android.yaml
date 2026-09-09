@@ -73,6 +73,14 @@ jobs:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
+      - name: Debug workspace config
+        run: |
+          echo "--- pnpm-workspace.yaml ---"
+          cat pnpm-workspace.yaml
+          echo "--- pwd ---"
+          pwd
+          ls -la
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
