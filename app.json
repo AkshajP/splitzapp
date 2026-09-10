@@ -14,7 +14,8 @@
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.akshaj.splitzapp"
+      "package": "com.akshaj.splitzapp",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
