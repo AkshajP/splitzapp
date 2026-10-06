@@ -49,3 +49,5 @@ dev server:
 
 Before for releases:
 `npx expo prebuild`
+The version code value checked by Play store lives at `android/app/build.gradle`.
+app.json is expo's config source
